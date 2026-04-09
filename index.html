@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SAP FI/CO Offline Hybrid Practice</title>
+<style>
+  :root {
+    --bg: #07101f;
+    --card: #0b1427;
+    --border: #243557;
+    --text: #ecf3ff;
+    --muted: #9fb2d7;
+    --accent: #86a8ff;
+    --good: #79e1a7;
+    --bad: #ff8d8d;
+    --warn: #ffd170;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: linear-gradient(180deg, #081224 0%, #060d19 100%); color: var(--text); font-family: Arial, Helvetica, sans-serif; }
+  body { min-height: 100vh; }
+  .app {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+    gap: 12px;
+    align-items: stretch;
+  }
+  .card {
+    background: rgba(11, 20, 39, 0.95);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 18px 42px rgba(0,0,0,0.25);
+    min-width: 0;
+  }
+  h1, h2, h3, p { margin: 0; }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  h2 { font-size: 18px; margin-bottom: 10px; }
+  .sub { color: var(--muted); line-height: 1.35; }
+  .controls {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    align-items: end;
+  }
+  .field { min-width: 0; }
+  .field label { display: block; color: var(--muted); font-size: 10.5px; margin-bottom: 4px; }
+  select, button, input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #0f1730;
+    color: var(--text);
+    font-size: 10.5px;
+  }
+  button {
+    background: var(--accent);
+    color: #081225;
+    font-weight: 700;
+    cursor: pointer;
+    height: 38px;
+  }
+  button.secondary { background: #20305f; color: var(--text); }
+  button.ghost { background: transparent; color: var(--text); }
+  .checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #0f1730;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 8px;
+    font-size: 9.5px;
+    min-height: 36px;
+    white-space: nowrap;
+  }
+  .checkbox input { margin: 0; }
+  .timer-inline {
+    display: grid;
+    grid-template-columns: 126px minmax(0, 1fr);
+    gap: 8px;
+    align-items: end;
+  }
+  .hidden { display: none !important; }
+  .history-list {
+    display: grid;
+    gap: 8px;
+    overflow: auto;
+    max-height: 320px;
+    padding-right: 4px;
+  }
+  .history-item, .set-block {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #0f1730;
+  }
+  .iter-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .iter-line:first-of-type { border-top: 0; }
+  .okrow { color: var(--good); }
+  .badrow { color: var(--bad); }
+  .sessionbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .inline {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .badge {
+    display: inline-block;
+    padding: 3px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #0f1730;
+    color: var(--muted);
+    font-size: 9.5px;
+    white-space: nowrap;
+  }
+  .question { line-height: 1.24; white-space: pre-wrap; height: 100%; }
+  .question-fit {
+    transform-origin: top left;
+    width: 100%;
+    will-change: transform;
+    padding-top: 0;
+    margin-top: -6px;
+  }
+  #sessionCard, #resultsCard, #reviewCard {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #questionWrap { flex: 1 1 auto; overflow: hidden; display: flex; align-items: flex-start; min-height: 420px; }
+  #reviewList { flex: 1 1 auto; overflow: auto; padding-right: 4px; }
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100%;
+    padding: 12px 6px;
+  }
+  .placeholder h3 { font-size: 26px; margin-bottom: 12px; }
+  .placeholder p { color: var(--muted); font-size: 18px; margin-bottom: 10px; }
+  .meta { margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+  .question h3 { font-size: 24px; margin-bottom: 8px; line-height: 1.16; }
+  .options { display: grid; gap: 7px; margin-top: 6px; }
+  .opt {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #0f1730;
+  }
+  .opt.correct { border-color: rgba(121, 225, 167, 0.5); background: rgba(26, 71, 47, 0.34); }
+  .opt.wrong { border-color: rgba(255, 141, 141, 0.5); background: rgba(94, 32, 32, 0.34); }
+  .opt input { margin: 0; }
+  .optlabel { min-width: 0; }
+  .mark { min-width: 22px; text-align: right; }
+  .navrow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+  }
+  .group { display: flex; gap: 8px; align-items: center; }
+  .nav-left { justify-content: flex-start; }
+  .nav-center { justify-content: center; }
+  .nav-right { justify-content: flex-end; }
+  .summarygrid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+  }
+  .stat {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #0f1730;
+    padding: 10px 12px;
+  }
+  .mini { font-size: 12px; color: var(--muted); }
+  .big { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .review-item {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+    background: #0f1730;
+    margin-bottom: 10px;
+  }
+  #reviewCard.expanded {
+    position: fixed;
+    inset: 8px;
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+    z-index: 9999;
+    overflow: hidden;
+    margin: 0;
+  }
+  body.review-open { overflow: hidden; }
+  @media (max-width: 900px) {
+    .topbar, .controls, .summarygrid { grid-template-columns: 1fr; }
+    .navrow { grid-template-columns: 1fr; }
+    .group { flex-wrap: wrap; }
+    .navrow button { width: 100%; }
+    #questionWrap, #reviewList, .history-list { overflow: visible; max-height: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="card">
+      <h1>SAP FI/CO Offline Hybrid Practice</h1>
+      <p class="sub">Single-file browser app with embedded CO and FI banks. Upload this one HTML file to GitHub Pages and use it directly.</p>
+      <div class="controls">
+        <div class="field">
+          <label>Module</label>
+          <select id="moduleSelect">
+            <option value="CO">Controlling (CO)</option>
+            <option value="FI">Financial Accounting (FI)</option>
+            <option value="COMBINED">Combined (CO + FI)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Practice scope</label>
+          <select id="scope"></select>
+        </div>
+        <div class="field">
+          <label>Feedback style</label>
+          <select id="mode">
+            <option value="hybrid">Hybrid (check now or at the end)</option>
+            <option value="practice">Practice (instant check available)</option>
+            <option value="exam">Exam (submit only at end)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Bank counts</label>
+          <div class="history-item" id="bankCounts">CO 80 · FI 80 · Combined 160</div>
+        </div>
+        <div class="checkbox"><input type="checkbox" id="shuffleQuestions" checked> <label for="shuffleQuestions">Shuffle questions within scope</label></div>
+        <div class="checkbox"><input type="checkbox" id="shuffleOptions" checked> <label for="shuffleOptions">Shuffle answer options</label></div>
+        <button id="startBtn">Start session</button>
+        <button id="resumeBtn" class="secondary">Resume saved session</button>
+        <button id="resetWeakBtn" class="ghost">Reset weak pool</button>
+        <button id="resetProgressBtn" class="ghost">Reset local progress</button>
+        <div class="timer-inline">
+          <div class="checkbox"><input type="checkbox" id="enableTimer"> <label for="enableTimer">Enable timer</label></div>
+          <div class="field hidden" id="timerDurationWrap">
+            <label>Test duration (minutes)</label>
+            <input type="number" id="timerMinutes" min="1" step="1" value="60" placeholder="Enter minutes">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Saved progress</h2>
+      <div id="savedStats" class="history-list"></div>
+    </div>
+  </div>
+
+  <div id="sessionCard" class="card">
+    <div class="sessionbar">
+      <div class="inline">
+        <span id="scopeBadge" class="badge"></span>
+        <span id="modeBadge" class="badge"></span>
+        <span id="progressBadge" class="badge"></span>
+        <span id="timerBadge" class="badge hidden"></span>
+      </div>
+      <div class="inline">
+        <button id="addWeakBtn" disabled class="ghost">Add current to weak pool</button>
+        <button id="checkBtn" disabled class="secondary">Check current</button>
+        <button id="submitBtn" disabled>Submit test</button>
+      </div>
+    </div>
+    <div id="questionWrap" class="question"><div class="placeholder"><h3>Ready to begin</h3><p>Select your module, scope, and mode above, then click <strong>Start session</strong>.</p><p>The question area will appear here and use most of the lower screen space.</p></div></div>
+    <div class="navrow">
+      <div class="group nav-left">
+        <button id="prevBtn" disabled class="secondary">Previous</button>
+      </div>
+      <div class="group nav-center">
+        <button id="jumpFirstBtn" disabled class="ghost">First</button>
+        <button id="jumpLastBtn" disabled class="ghost">Last</button>
+      </div>
+      <div class="group nav-right">
+        <button id="nextBtn" disabled class="secondary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultsCard" class="card hidden">
+    <h2>Result</h2>
+    <div class="summarygrid">
+      <div class="stat"><div class="mini">Score</div><div id="scoreText" class="big"></div></div>
+      <div class="stat"><div class="mini">Correct</div><div id="correctText" class="big"></div></div>
+      <div class="stat"><div class="mini">Incorrect</div><div id="incorrectText" class="big"></div></div>
+      <div class="stat"><div class="mini">Accuracy</div><div id="accuracyText" class="big"></div></div>
+      <div class="stat"><div class="mini">Time used</div><div id="timeUsedText" class="big"></div></div>
+    </div>
+    <div id="resultNote" class="sub"></div>
+    <div class="navrow">
+      <div class="group">
+        <button id="reviewBtn" class="secondary">Review full set</button>
+        <button id="reviewWrongBtn" class="ghost">Review wrong only</button>
+        <button id="restartBtn">Start new session</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="reviewCard" class="card hidden">
+    <h2>Set review</h2>
+    <p class="sub">Questions below use the same answer order from this attempt. Correct options show ✅. Wrong options you selected show ❌. Unselected correct answers also show ✅ so you can compare everything in one place.</p>
+    <div class="navrow" style="margin-bottom:12px;">
+      <div class="group">
+        <button id="reviewAllModeBtn" class="secondary">Full set review</button>
+        <button id="reviewWrongModeBtn" class="ghost">Wrong only</button>
+        <button id="closeReviewBtn">Back</button>
+      </div>
+    </div>
+    <div id="reviewList"></div>
+  </div>
+</div>
+
+<script>
+const CO_SOURCE = `Q1. You want to use a template to consider overhead during product costing. How do you assign the template to your material?
+A. Using an overhead group and an overhead key (correct)
+B. Using a costing key and an overhead key
+C. Using a cost component group and an overhead group
+D. Using an origin group and an overhead group
+
+Q2. You want to determine which operations of the routing should be considered in a product cost calculation. How do you do this? Note: There are 2 correct answers to this question.
+A. By assigning a cost center to the work center in the operation
+B. By marking the cost indicator in the control key assigned to the operation (correct)
+C. By marking the Relevance to Costing indicator in the operation (correct)
+D. By defining a usage key in the header of the routing
+
+Q3. How do you maintain number range intervals for documents in Controlling? Note: There are 2 correct answers to this question.
+A. By client
+B. By business transactions (correct)
+C. By controlling area (correct)
+D. By document type
+
+Q4. You want to create a new standard cost estimate based on the quantity structure of the existing standard cost estimate. Which object do you use?
+A. Costing type
+B. Transfer control
+C. Reference variant (correct)
+D. Costing version
+
+Q5. Why would you use manual cost allocation in Controlling? Note: There are 2 correct answers to this question.
+A. To allocate costs using an allocation cycle
+B. To run simple allocations of actual data (correct)
+C. To run simple allocations of plan data
+D. To correct secondary postings (correct)
+
+Q6. Which statements are relevant to the cost of sales accounting method in profitability management? Note: There are 2 correct answers to this question.
+A. It presents the costs and revenues information in a format that is ideal for conducting margin analyses. (correct)
+B. It presents revenues, primary expenses, changes in stock, WIP, and car lized activities.
+C. It aims to summarize activity and situational change for a given organizational unit over a period of time.
+D. It aims to match revenues for goods and services against sales-related expenses. (correct)
+
+Q7. What parameters can you set up when defining order types? Note: There are 2 correct answers to this question.
+A. Allow revenue postings. (correct)
+B. Define source structure.
+C. Define default parameters for master record fields. (correct)
+D. Define document type.
+
+Q8. You are implementing SAP S/4HANA and you want to run analytical reports off a single data model. How is data reported on in SAP S/4HANA?
+A. Reporting on data is available in real-time if in conjunction with SAP BWANA.
+B. Reporting on data is available in near real-time for aggregated tables.
+C. Reporting on data is available in real-time at every level of detail. (correct)
+D. Reporting on data is available in real-time only for aggregated level of detail
+
+Q9. What are the prerequisites for automatic generation of the settlement rule to a market segment for a sales order item? Note: There are 2 correct answers to this question.
+A. Attributed profitability analysis is activated. (correct)
+B. close Costing based profitability analysis is activated.
+C. The sales order item is assigned to a project.
+D. The sales order item is a cost object. (correct)
+
+Q10. What can you do with statistical internal orders? Note: There are 2 correct answers to this question.
+A. Simultaneously post to a cost center. (correct)
+B. Perform results analysis.
+C. Settle to a CO-PA segment.
+D. Perform budget availability control. (correct)
+
+Q11. In the Product Cost by Order process, what does the system calculate depending on the order status?
+A. Both WIP and variances or only variances
+B. WIP at percentage of completion (POC) method or variances
+C. close WIP at target costs or variances
+D. WIP at actual costs or variances (correct)
+
+Q12. You want to use budget availability control for your projects and internal orders. What can you check using budget availability control? Note: There are 2 correct answers to this question.
+A. The availability of funds according to tolerance limits (correct)
+B. The availability of funds in object currency
+C. The availability of funds on period level
+D. The availability of funds using overall plan value (correct)
+
+Q13. You define rules in a status profile and assign the profile to your internal order type. What do you use the status profile for? Note: There are 3 correct answers to this question.
+A. To permit or forbid specific transactions (correct)
+B. To define users for the order
+C. To define the user status (correct)
+D. To activate the CO partner update
+E. To set the initial status as Created or Released (correct)
+
+Q14. For which of the following situations would you need to implement the transfer price solution in SAP S/4HANA?
+A. Parallel costing is needed in order to calculate separate costs of goods manufactured for different accounting principles.
+B. Parallel price calculation and invoicing are needed to facilitate intercompany reconciliation.
+C. close Parallel valuation views of the same logistical flows are needed to differentiate between legal and group valuation.
+D. Parallel valuation views of the same logistical flows are needed to differentiate between legal and profit center valuation. (correct)
+
+Q15. What master data objects can you set up using time-based fields? Note: There are 2 correct answers to this question.
+A. Activity types (correct)
+B. Cost centers (correct)
+C. close Statistical key figures
+D. Cost elements
+
+Q16. What are some of the characteristics of SAP Core Data Services (CDS) views? Note: There are 3 correct answers to this question.
+A. CDS views duplicate data for reporting efficiencies.
+B. CDS views have no latency. (correct)
+C. CDS views are considered system modifications.
+D. CDS views support authorizations. (correct)
+E. CDS views have ready-to-use content. (correct)
+
+Q17. From which tables does SAP S/4HANA select line items in costing-based Profitability Analysis reports? Note: There are 2 correct answers to this question.
+A. CE1XXXX (correct)
+B. ACDOCA
+C. CE4XXXX_ACCT
+D. CE2XXXX (correct)
+
+Q18. Which of the following can you use to explore released APIs?
+A. SAP Business Accelerator Hub (correct)
+B. SAP Application Interface Framework
+C. SAP Integration Suite
+
+Q19. Which default values can you configure for the product cost collector? Note: There are 2 correct answers to this question.
+A. Results Analysis (RA) version
+B. Results Analysis (RA) key (correct)
+C. Costing variant for preliminary costing (correct)
+D. close Variance variant
+
+Q20. Which receiver must be allowed in the settlement profile of a product cost collector?
+A. close Profitability segment
+B. Sales order item
+C. Order (correct)
+D. Material
+
+Q21. Which of the following objects can be selected in templates for activity-based costing? Note: There are 2 correct answers to this question.
+A. Business process (correct)
+B. Cost center/activity type (correct)
+C. Internal order
+D. WBS element
+
+Q22. Which of the following statements best describe Product Cost by Period? Note: There are 2 correct answers to this question.
+A. It is used in conjunction with a product cost collector. (correct)
+B. It is used when the focus of controlling is on a stable and continuous production process.
+C. close It is used to analyze costs by individual production lots.
+D. It is used to analyze work in process (WIP) based on actual costs. (correct)
+
+Q23. Which model can be used for ABAP cloud-native development?
+A. The ABAP Cloud Development Model (correct)
+B. The SAP S/4HANA Cloud Extensibility Model
+C. ABAP RESTful Application Programming Model
+
+Q24. You configure the commitment management solution for cost centers and projects in your SAP S/4HANA system. Which documents can create commitments against the budget?
+A. Invoice for project related travel expenses (correct)
+B. Purchase requisition for purchasing office materials
+C. Purchase order for purchasing a car with direct capitalization
+D. Goods receipt for production material stock
+
+Q25. What are characteristics of SAP S/4HANA embedded analytics? Note: There are 2 correct answers to this question.
+A. It is hosted on the SAP Cloud Platform and integrates seamlessly with SAP S/4HANA on the Fiori Launchpad.
+B. It is part of the core SAP S/4HANA license and uses the same technical stack and user interface. (correct)
+C. It uses data summarized in SAP BW/4HANA.
+D. It uses core data services (CDS) views to create virtual data models (V) for reporting. (correct)
+
+Q26. What are some SAP recommended guiding principles to achieve clean core operations? Note: There are 3 correct answers to this question.
+A. Define roles and responsibilities as part of a process transformation office. (correct)
+B. Establish release management.
+C. Establish regular housekeeping tasks and procedures.
+D. Integrate clean core practices in the end-to-end value process chain. (correct)
+E. Establish an organizational structure, technical foundation, and transformation methodology for clean core. (correct)
+
+Q27. In which module do you process profit center allocations in SAP S/4HANA?
+A. General ledger accounting
+B. Cost center accounting
+C. Product cost accounting
+D. Account-based profitability analysis (correct)
+
+Q28. You are creating a new activity type and want to maintain plan prices for a cost center. Which attributes must you configure in the activity type master record?Note: There are 3 correct answers to this question.
+A. Output quantity
+B. Price indicator (correct)
+C. Valid cost center categories (correct)
+D. Activity type category (correct)
+E. close CO version
+
+Q29. At what level do you create the structure of the operating concern for margin analysis?
+A. Sales organization
+B. Client (correct)
+C. Cross client
+D. Controlling area
+
+Q30. How can you populate local variables in Profitability Analysis reports?
+A. By maintaining the configuration
+B. By populating from user parameters
+C. close By defining derivation rules
+D. By user entry during report execution (correct)
+
+Q31. You are considering using commitment management with internal orders. Where do you need to activate commitment management? Note: There are 2 correct answers to this question.
+A. In individual internal order master data
+B. close In the version
+C. In the order type (correct)
+D. In the controlling area (correct)
+
+Q32. Which of the following values can be calculated using results analysis? Note: There are 3 correct answers to this question.
+A. close Gross margin
+B. Cost of sales (correct)
+C. Cost of goods manufactured
+D. Work in progress (correct)
+E. Reserves for unrealized costs (correct)
+
+Q33. Which setting in the cost center master data do you use to assign the same attributes to similar cost centers?
+A. close Functional area
+B. Cost center department
+C. Standard hierarchy node
+D. Cost center category (correct)
+
+Q34. You post a billing document for a sales order with sales order controlling. What data flows to Profit Center Accounting? Note: There are 2 correct answers to this question.
+A. Sales deductions (correct)
+B. Order quantity
+C. Payment discount
+D. Revenues (correct)
+
+Q35. For which objects can you enter statistical key figures? Note: There are 3 correct answers to this question.
+A. Internal orders (correct)
+B. WBS elements (correct)
+C. Functional areas
+D. Cost centers (correct)
+E. Cost elements
+
+Q36. Which type(s) of Profitability Analysis update(s) the cost of goods sold at the time of delivery only?
+A. Combined profitability analysis (correct)
+B. Both margin analysis and costing-based
+C. Margin analysis
+D. Costing-based
+
+Q37. You create a new profit center. Which company code(s) is it assigned to by default?
+A. All company codes with document splitting activated.
+B. All company codes within the controlling area. (correct)
+C. The company codes reporting to the same segment.
+D. The company code of the assigned cost center.
+
+Q38. How does SAP S/4HANA capture costs? Note: There are 2 correct answers to this question.
+A. Secondary costs are captured in extension ledger CO that references the leading ledger.
+B. Primary and secondary costs are captured on cost elements. (correct)
+C. Primary and secondary costs are captured in general ledger accounts. (correct)
+D. close Only primary costs are captured in general ledger accounts.
+
+Q39. You create a new cost estimate. Which of the following steps are required to update the standard price of the material? Note: There are 3 correct answers to this question.
+A. close Run the cost estimate.
+B. Simulate the cost estimate. (correct)
+C. Activate the cost estimate.
+D. Release the cost estimate. (correct)
+E. Mark the cost estimate. (correct)
+
+Q40. What can you manage via the account assignment category? Note: There are 2 correct answers to this question.
+A. Accounting via sales order
+B. Costing variant (correct)
+C. Separate sales order stock (correct)
+D. Results analysis key
+
+Q41. To which objects can you settle an internal order using cost elements with cost element category 21 (internal settlement)? Note: There are 3 correct answers to this question.
+A. WBS element (correct)
+B. Asset
+C. General ledger account
+D. Sales order item (correct)
+E. Network (correct)
+
+Q42. In the material master record there are three planned prices: "Planned price 1", "Planned price 2" and "Planned price 3". What do you use them for? Note: There are 2 correct answers to this question.
+A. To update the standard price at release of a cost estimate
+B. To valuate future goods movements
+C. To valuate the materials in cost estimates (correct)
+D. To be used for reporting purposes (correct)
+
+Q43. Which parameters are controlled by the costing type in a costing variant? Note: There are 2 correct answers to this question.
+A. Price updates (correct)
+B. close Costing sheet
+C. Price for materials (correct)
+D. Save with date key
+
+Q44. You want to maintain a cost component structure. What can you determine for each cost component? Note: There are 3 correct answers to this question.
+A. Relevance of cost component to results analysis
+B. Relevance of cost components to goods manufactured (correct)
+C. Relevance of cost component to inventory valuation (correct)
+D. Assignment of cost component to cost component group
+E. Assignment of cost component to calculation base for overheads in costing sheet (correct)
+
+Q45. How can you define the overhead rate in a costing sheet? Note: There are 2 correct answers to this question.
+A. As equivalence number
+B. As fixed value
+C. As percentage rate (correct)
+D. As quantity-based surcharge (correct)
+
+Q46. To which object do you assign a costing sheet?
+A. Valuation variant (correct)
+B. Cost component structure
+C. Costing variant
+D. Costing type
+
+Q47. How does the system derive the requirement type from the material master data? Note: There are 2 correct answers to this question.
+A. MRP group requirements class -> planning strategy -> requirements type
+B. Strategy group -> planning strategy -> requirements class -> requirements type
+C. Strategy group -> planning strategy -> requirements type (correct)
+D. MRP group-> strategy group -> planning strategy -> requirements type (correct)
+
+Q48. Which field can you select for both reporting in costing-based and account-based Profitability Analysis?
+A. Version
+B. Record type
+C. Cost element
+D. Value in Controlling Area Currency (correct)
+
+Q49. You would like to allocate primary and secondary costs from a cost center to another cost center. Which allocation method will you use?
+A. Periodic reposting
+B. Top-down distribution
+C. Assessment (correct)
+D. Distribution
+
+Q50. What are some of the characteristics of Profit Center Accounting in SAP S/4HANA? Note: There are 2 correct answers to this question.
+A. It can be used with period and/or cost of sales accounting. (correct)
+B. It requires the activation of margin analysis.
+C. It is integrated in the universal journal. (correct)
+D. It is possible to derive the profit center from the segment in configuration.
+
+Q51. You have implemented Product Cost by Sales Order in conjunction with cost-based POC results analysis in your organization. For a particular sales order item, you have the following: Plan revenue = 3000; Plan costs = 2000 Actual revenue = 1200; Actual costs = 1000 What data does the system calculate during results analysis?
+A. Revenue = 1500; Cost of sales = 1000; Capitalized revenue (revenue in excess of billings) = 300 (correct)
+B. Revenue = 1500; Cost of sales = 1000; Revenue surplus = 300
+C. Revenue = 1200; Cost of sales = 1000; Revenue surplus = 200
+D. Revenue = 1200; Cost of sales = 1000; Capitalized revenue (revenue in excess of billings) = 200
+
+Q52. Organizational Assignments and Process Integration 42 of 80 You want to set up integrated planning for your internal orders. What do you need to do? Note: There are 2 correct answers to this question.
+A. Set the relevant indicator in the internal order master record.
+B. Set the relevant indicator in the controlling area.
+C. Set the relevant indicator in the CO version. (correct)
+D. Set the relevant indicator in the planning profile of the order type. (correct)
+
+Q53. You are setting up costing-based Profitability Analysis for your organization. What are related configuration activities? Note: There are 3 correct answers to this question.
+A. Enable attributed profitability analysis
+B. Configure summarization levels
+C. Configure account determination for COGS split (correct)
+D. Assign value fields to conditions (correct)
+E. Define characteristics (correct)
+
+Q54. You are working in the machinery industry and you consider implementing cost center budget management. Which functions are available for cost center budget management? Note: There are 2 correct answers to this question.
+A. Budget transfer from source cost center to multiple target cost centers (correct)
+B. Availability control against monthly budget amount (correct)
+C. Budget values import with CSV file
+D. Unused budget carry-forward to next fiscal year
+
+Q55. How can you configure the transfer price solution in SAP S/4HANA? Note: There are 2 correct answers to this question.
+A. Use separate material ledgers for each valuation.
+B. Use separate ledgers for each valuation. (correct)
+C. Use separate segments for each valuation.
+D. Use separate currency types within the same ledger for each valuation. (correct)
+
+Q56. You want to enable WIP calculation in Product Cost by Period. What do you need to configure?
+A. Valuation variant (correct)
+B. Settlement profile
+C. Variance variant
+D. Profitability Analysis (PA) transfer structure
+
+Q57. What values flow from Sales and Distribution billing to costing-based Profitability Analysis? Note: There are 2 correct answers to this question.
+A. variance categories Value of "Gross Margin 2"
+B. Value of conditions of the pricing procedure (correct)
+C. Cost of goods sold split by cost components (correct)
+D. Production variances split by
+
+Q58. You want to derive the profitability segment for a line item in the universal journal using SAP S/4HANA standard configuration. What requirements must be fulfilled? Note: There are 2 correct answers to this question.
+A. Account-based Profitability Analysis must be active. (correct)
+B. The type of the addressed ledger must be an extension ledger.
+C. The type of the general ledger account must be primary cost/revenue or secondary cost. (correct)
+D. Costing-based Profitability Analysis must be active.
+
+Q59. You want to run an assessment cycle in Margin Analysis to allocate costs during period-end closing for your organization. Which of the following objects can be part of the assessment cycle?
+A. PA transfer structure
+B. Source structure
+C. Profit center
+D. Tracing factor (correct)
+
+Q60. What are some of the unique attributes of an assessment cycle in Controlling? Note: There are 3 correct answers to this question.
+A. They transfer primary and secondary costs. (correct)
+B. They use the original cost element during transfer.
+C. They can be defined with an allocation structure.
+D. They can be processed in an iterative way. (correct)
+E. They use a secondary cost element during transfer. (correct)
+
+Q61. Which of the following statements best describe Product Cost by Order? Note: There are 2 correct answers to this question.
+A. It is recommended for products with a long production time.
+B. It is used when full cost traceability is needed. (correct)
+C. It is used when you perform repetitive manufacturing.
+D. It is used when controlling by individual production lots or discrete quantities is needed. (correct)
+
+Q62. In SAP S/4HANA, you have decided to activate only account-based profitability analysis for your organization. You want to settle costs and revenue of a sales order item to a profitability segment. What do you need to configure?
+A. Source structure (correct)
+B. Cost component structure
+C. Allocation structure
+D. PA transfer structure
+
+Q63. What do you need to set up in order to bring the values from the incoming sales orders into account-based Profitability Analysis?
+A. An extension ledger of type "S: Line items with technical numbers / deletion possible"
+B. An extension ledger of type "P: Line items with technical numbers / no
+C. A new standard G/L ledger with exclusive usage for "Prediction" tion possible"
+D. A multi-valuation ledger (correct)
+
+Q64. You are setting up a direct internal activity allocation in SAP S/4HANA. What are valid receivers for the activity? Note: There are 3 correct answers to this question.
+A. WBS element (correct)
+B. General ledger account
+C. Internal order (correct)
+D. Sales order item (correct)
+E. Profit center
+
+Q65. You have activated budget availability control against the overall value for an internal order and entered an overall budget of 10000. Actuals of 10000 were posted in the previous year. You are surprised to realize that a purchase order of 1000 was created for this internal order in the current year. How is that possible? Note: There are 2 correct answers to this question.
+A. The purchase order was entered in a different year than the budget. (correct)
+B. The difference of 1000 is within the tolerance limits defined in the configuration.
+C. The purchase order has NOT generated a budget relevant document yet.
+D. The cost account is exempted from budget availability control. (correct)
+
+Q66. You are running an indirect activity allocation. What do you post to the sender and receiver?
+A. You post quantity and cost to both the sender and receiver.
+B. You post both quantity and cost to the receiver, and cost only to the se
+C. You post both quantity and cost to the sender, and cost only to the receiver.
+D. You post only cost to both the sender and receiver. (correct)
+
+Q67. You want to understand why costs are collected on sales order item level. What do you need to check in the configuration? Note: There are 3 correct answers to this question.
+A. Valuation variant
+B. Requirement type (correct)
+C. Costing type
+D. Account assignment category (correct)
+E. Requirements class (correct)
+
+Q68. What can you configure in the settlement profile? Note: There are 2 correct answers to this question.
+A. Determine an overhead key.
+B. Determine whether settlement is required. (correct)
+C. Define settlement document type. (correct)
+D. Define a number range for settlement documents.
+
+Q69. You have implemented Product Cost by Sales Order in conjunction with revenue-based results analysis in your organization. For a particular sales order item, you have the following: Plan revenue = 3000; Plan costs = 2000 Actual revenue = 1200; Actual costs = 1000  What data does the system calculate during results analysis?
+A. Revenue = 1200; Cost of sales = 800; WIP = 200 (correct)
+B. Revenue = 1200; Cost of sales = 800; Reserve = 200
+C. Revenue = 1200; Cost of sales = 1000; WIP = 200
+D. Revenue = 1200; Cost of sales = 1000; Reserve = 200
+
+Q70. What are some of the characteristics of planning for internal orders? Note: There are 2 correct answers to this question.
+A. You can plan multiple versions.
+B. against plan values.
+C. You can define tolerance limits for plan overspend. (correct)
+D. You can enter costs and revenues. (correct)
+
+Q71. Your enterprise has five company codes assigned to three separate operating chart of accounts. What is the optimal way of configuring the relationship between operating concerns and controlling area?
+A. One operating concern Three controlling areas
+B. One operating concern Five controlling areas
+C. One operating concern One controlling area (correct)
+D. Three operating concerns Three controlling areas
+
+Q72. Which statement best describes cost center standard hierarchy?
+A. It is a structure where all cost centers with the same currency are defined.
+B. It is a structure to which all the cost centers within a controlling area are assigned. (correct)
+C. It is a structure to which all cost centers of a client have to be assigned.
+D. It is a structure where all cost centers within the same operating conce
+
+Q73. Which processes split costs into their primary cost components? Note: There are 2 correct answers to this question.
+A. Top down distribution
+B. Business process price calculation (correct)
+C. Cost center/activity type price calculation (correct)
+D. Execution of the assessment cycles
+
+Q74. Which scenarios can be covered by one single costing run? Note: There are 2 correct answers to this question.
+A. Current cost estimate of all the materials in one plant
+B. Standard cost estimate of all the materials in all controlling areas
+C. Standard cost estimate of all the materials in all company codes of a controlling area (correct)
+D. Inventory cost estimate of all the materials in one plant (correct)
+
+Q75. You create alternative CO versions for your controlling area, in addition to version  What would you use additional CO versions for? Note: There are 2 correct answers to this question.
+A. To store data of parallel valuation (correct)
+B. To store different budget data
+C. To store different plan data (correct)
+D. To store data of alternative plan costing runs
+
+Q76. How would you explain automatic account assignment in SAP S/4HANA? Note: There are 2 correct answers to this question.
+A. Proposed values can be overwritten in the application. (correct)
+B. It can be defined for postings on general ledger accounts of secondary costs type.
+C. Proposed values take precedence over validation and substitution. (correct)
+D. It can be defined for postings on general ledger accounts of primary costs type.
+
+Q77. Which of the following API types does SAP recommend to use to achieve clean core integrations? Note: There are 2 correct answers to this question.
+A. SOAP (correct)
+B. IDoc
+C. Data (correct)
+D. RFC
+
+Q78. What are some of the objectives of Profitability Analysis? Note: There are 2 correct answers to this question.
+A. Provide the company with information on the performance of its market segments. (correct)
+B. Provide the company with a detailed view of its financial statements by as of responsibilities.
+C. Allow the company to determine if the sales force achieved their contribution margin goals. (correct)
+D. Allow the company to determine standard costs and revenues according to the period accounting method.
+
+Q79. At which level do you define the valuation method for results analysis?
+A. Operating concern
+B. Controlling area (correct)
+C. Client
+D. Valuation area
+
+Q80. Where do you define which cost elements are used during internal order settlement?
+A. Settlement rule
+B. Derivation rule
+C. Allocation structure (correct)
+D. Source structure`;
+
+const FI_SOURCE = `### C_TS4FI_2023 - SAP Certified Associate - SAP S/4HANA Cloud Private Edition, Financial Accounting
+
+---
+
+**Question 1/80**
+As a pre-closing activity, selected suppliers are to con rm their balances. Which confirmation procedure do you use when a response is expected only in case of discrepancies?
+* (X) Balance confirmation (Incorrect)
+* (X) Balance request (Incorrect)
+* **(✓) Balance notification (Correct)**
+* (X) Account statement (Incorrect)
+
+---
+
+**Question 2/80**
+What does the fiscal year variant de ne? Note: There are 2 correct answers to this question.
+* (X) The posting periods open for posting (Incorrect)
+* **(✓) The start and end date of posting periods (Correct)**
+* (X) The authorization to post to special periods (Incorrect)
+* **(✓) The number of posting periods (Correct)**
+
+---
+
+**Question 3/80**
+Which elds are maintained on the chart of accounts level of a G/L account? Note: There are 3 correct answers to this question.
+* **(✓) Account group (Correct)**
+* **(✓) Short text (Correct)**
+* (X) Field status group (Incorrect)
+* (X) Alternative account number (Incorrect)
+* **(✓) Group account number (Correct)**
+
+---
+
+**Question 4/80**
+You have made an agreement with a customer to guarantee an amount of EUR 10000. What is the result of recording this guarantee in SAP S/4HANA?
+* (X) One statistical line item (Incorrect)
+* (X) One noted item (Incorrect)
+* (X) Two noted items (Incorrect)
+* **(✓) Two statistical line items (Correct)**
+
+---
+
+**Question 5/80**
+What are the 3 mandatory steps of the dunning process in the SAP S/4HANA system? Note: There are 3 correct answers to this question.
+* **(✓) Maintain the parameters of the dunning program (Correct)**
+* **(✓) Schedule the dunning run (Correct)**
+* (X) Change the dunning proposal (Incorrect)
+* (X) Approve the dunning proposal (Incorrect)
+* **(✓) Start the dunning printout (Correct)**
+
+---
+
+**Question 6/80**
+You are implementing the Financial Closing Cockpit for your organization. What are the advantages of de ning task groups? Note: There are 2 correct answers to this question.
+* **(✓) It covers multiple companies with same or similar tasks. (Correct)**
+* (X) It allows cross task list execution of tasks. (Incorrect)
+* (X) It allows cross task list monitoring of task status. (Incorrect)
+* **(✓) It allows cross template maintenance. (Correct)**
+
+---
+
+**Question 7/80**
+Where do you assign the currency type?
+* (X) Accounting principle (Incorrect)
+* (X) Valuation area (Incorrect)
+* (X) Company (Incorrect)
+* **(✓) Ledger (Correct)**
+
+---
+
+**Question 8/80**
+You want to include multiple company codes in a single payment run. What are the prerequisites for the company codes?
+* (X) They must belong to the same controlling area. (Incorrect)
+* **(✓) They must be located in the same country. (Correct)**
+* (X) They must have the same configuration for payment transactions. (Incorrect)
+* (X) They must all belong to the same company. (Incorrect)
+
+---
+
+**Question 9/80**
+You notice that the GR/IR account does not have a zero balance. What could be the cause? Note: There are 2 correct answers to this question.
+* **(✓) A purchase order has a partial invoice receipt but not yet a goods receipt. (Correct)**
+* (X) A purchase order has a goods receipt and an invoice receipt with the same quantity and values. (Incorrect)
+* (X) A purchase order has a goods receipt and an invoice receipt with the same quantity but with different values. (Incorrect)
+* **(✓) A purchase order has a partial goods receipt for which we have not yet received an invoice. (Correct)**
+
+---
+
+**Question 10/80**
+At which level do you de ne functional areas?
+* **(✓) Client (Correct)**
+* (X) Controlling area (Incorrect)
+* (X) Company code (Incorrect)
+* (X) Financial statement version (Incorrect)
+
+---
+
+**Question 11/80**
+You are entering a credit memo in Financial Accounting and are wondering why the entered payment terms are being ignore What are the reasons? Note: There are 2 correct answers to this question.
+* **(✓) The eld "Reference" of the credit memo is blank. (Correct)**
+* (X) The credit memo was entered in Financial Accounting. (Incorrect)
+* (X) The due date determined based on the entered payment terms is in the past. (Incorrect)
+* **(✓) The credit memo was created without reference to an invoice. (Correct)**
+
+---
+
+**Question 12/80**
+You have cleared a customer open item but want to undo this action. What are the available options? Note: There are 2 correct answers to this question.
+* **(✓) Reset the clearing document (Correct)**
+* (X) Repost the clearing document (Incorrect)
+* **(✓) Reset and reverse the clearing document (Correct)**
+* (X) Reverse the clearing document (Incorrect)
+
+---
+
+**Question 13/80**
+Your company based in France has a permanent establishment in Switzerland where nancial statements are required by law. Which organizational unit do you need to create for the permanent establishment in Switzerland?
+* **(✓) Company code (Correct)**
+* (X) Pro t center (Incorrect)
+* (X) Segment (Incorrect)
+* (X) Business area (Incorrect)
+
+---
+
+**Question 14/80**
+You want to implement purchase order accruals in SAP S/4HANA. Which of the following use cases are relevant? Note: There are 2 correct answers to this question.
+* (X) Purchase of raw materials for inventory (Incorrect)
+* **(✓) Purchase of consumable materials (Correct)**
+* (X) Purchase of fixed assets (using direct capitalization method) (Incorrect)
+* **(✓) Purchase of services (Correct)**
+
+---
+
+**Question 15/80**
+On which levels do you define FI-AA account determination? Note: There are 2 correct answers to this question.
+* **(✓) Chart of accounts (Correct)**
+* (X) Chart of depreciation (Incorrect)
+* (X) Company code (Incorrect)
+* **(✓) Client (Correct)**
+
+---
+
+**Question 16/80**
+When de ning a new standard ledger, which action must you take to manually post a general journal entry to it?
+* (X) De ne the underlying ledger (Incorrect)
+* **(✓) Assign a chart of accounts to the ledger (Correct)**
+* (X) Assign the ledger to a company code (Incorrect)
+* (X) Include the ledger in a ledger group (Incorrect)
+
+---
+
+**Question 17/80**
+What are some features of SAP Business Technology Platform? Note: There are 2 correct answers to this question
+* **(✓) It provides data management and analytics. (Correct)**
+* (X) It helps customers to collaborate to build exible value chains. (Incorrect)
+* (X) It supports customers in understanding their stakeholder's needs. (Incorrect)
+* **(✓) It supports application development and integration. (Correct)**
+
+---
+
+**Question 18/80**
+What separates the leading ledger from other parallel standard ledgers?
+* **(✓) It doesn't derive values from other ledgers. (Correct)**
+* (X) It is used for performing segment reporting. (Incorrect)
+* (X) It is assigned to all company codes. (Incorrect)
+* (X) It is used to represent the group valuation (Incorrect)
+
+---
+
+**Question 19/80**
+You run the balance carry forward for your company code. When looking at the log you see there is an error with regards to Asset Accounting. What is the cause of the error?
+* (X) You have not run the settlement for your assets under construction. (Incorrect)
+* (X) You have not posted depreciation completely. (Incorrect)
+* **(✓) You have incomplete asset master records. (Correct)**
+* (X) You have not closed the previous scal year. (Incorrect)
+
+---
+
+**Question 20/80**
+You are trying to extend a G/L account to a new company code but are getting an error for incomplete Data. Which fields must you always maintain when extending a G/L Account? Note: There are 2 correct answers to this question.
+* **(✓) Account currency (Correct)**
+* (X) Account number (Incorrect)
+* (X) Sort key (Incorrect)
+* **(✓) Field status group (Correct)**
+
+---
+
+**Question 21/80**
+You need to explain the concept of noted items in SAP S/4HANA. Which characteristics are speci c to noted items? Note: There are 3 correct answers to this question.
+* **(✓) They generate statistical postings. (Correct)**
+* (X) They generate postings that do not balance. (Incorrect)
+* **(✓) They can be accessed by the payment program and the dunning program. (Correct)**
+* **(✓) They are managed as open items on customer and vendor accounts. (Correct)**
+* (X) They update the general ledger in Entry View only. (Incorrect)
+
+---
+
+**Question 22/80**
+The SAP Business Network helps customers digitalize cross-company business processes. On which solutions does the network build? Note: There are 3 correct answers to this question.
+* **(✓) Travel (Correct)**
+* (X) Human Capital Management (Incorrect)
+* (X) Sales (Incorrect)
+* **(✓) Procurement (Correct)**
+* **(✓) Contingent Workforce (Correct)**
+
+---
+
+**Question 23/80**
+What do you configure for regrouping receivables and payables?
+* **(✓) Sort Method (Correct)**
+* (X) Valuation Method (Incorrect)
+* (X) Calculation Method (Incorrect)
+* (X) Provision Method (Incorrect)
+
+---
+
+**Question 24/80**
+Which items are taken into account during foreign currency valuation? Note: There are 2 correct answers to this question.
+* (X) Line item valuation for balance sheet accounts not de need as reconciliation account (Incorrect)
+* **(✓) Line item valuation for balance sheet accounts de need as open item management (Correct)**
+* **(✓) Balance valuation on items for balance sheet accounts de need with ledger group specific open item management (Correct)**
+* (X) Balance valuation on items for balance sheet accounts not de need as open item management (Incorrect)
+
+---
+
+**Question 25/80**
+You want to assign your 3 newly created company codes to the same controlling area. Which settings must be common to all the company codes? Note: There are 2 correct answers to this question.
+* **(✓) Operating chart of accounts (Correct)**
+* **(✓) Fiscal year variant (Correct)**
+* (X) Source currency for group currency (Incorrect)
+* (X) Posting period variant (Incorrect)
+
+---
+
+**Question 26/80**
+You perform the depreciation run for your assets. For a specific asset, you would like to post the depreciation specified in the asset master data. How do you achieve this?
+* (X) By creating a substitution in Financial Accounting line items (Incorrect)
+* (X) By removing the cost center from the asset master data (Incorrect)
+* (X) By setting the ?identical? parameter as not activated in the account assignment configuration (Incorrect)
+* **(✓) By changing the corresponding error into a warning via configuration (Correct)**
+
+---
+
+**Question 27/80**
+From which G/L account types are values shown in the pro t and loss (P&L) statement? Note: There are 3 correct answers to this question.
+* **(✓) Primary cost or Revenue (Correct)**
+* **(✓) Secondary Costs (Correct)**
+* (X) Cash account (Incorrect)
+* (X) Balance Sheet Account (Incorrect)
+* **(✓) Non-operating Expense or Income (Correct)**
+
+---
+
+**Question 28/80**
+Which of the following organizational elements can be shared by several company codes? Note: There are 3 correct answers to this question.
+* **(✓) Pro t center (Correct)**
+* (X) Sales organization (Incorrect)
+* **(✓) Segment (Correct)**
+* (X) Plant (Incorrect)
+* **(✓) Business area (Correct)**
+
+---
+
+**Question 29/80**
+Which parameters can you configure on the dunning level? Note: There are 2 correct answers to this question.
+* (X) Line-item grace period (Incorrect)
+* **(✓) Days in arrears (Correct)**
+* (X) Interest indicator (Incorrect)
+* **(✓) Payment deadline (Correct)**
+
+---
+
+**Question 30/80**
+What are characteristics of depreciation area 01? Note: There are 2 correct answers to this question.
+* (X) It must be linked to leading ledger OL. (Incorrect)
+* **(✓) It must always post in real time. (Correct)**
+* **(✓) It cannot take over values from other areas (Correct)**
+* (X) It must be de need as a cost accounting valuation area type. (Incorrect)
+
+---
+
+**Question 31/80**
+Which model can be used for ABAP cloud-native development?
+* **(✓) ABAP RESTful Application Programming Model (Correct)**
+* (X) The ABAP Cloud Development Model (Incorrect)
+* (X) The SAP S/4HANA Cloud Extensibility Model (Incorrect)
+
+---
+
+**Question 32/80**
+How does the system determine the relevant accounting principle when performing foreign currency valuation?
+* (X) Via the valuation type (Incorrect)
+* (X) Via the valuation method (Incorrect)
+* (X) Via the valuation class (Incorrect)
+* **(✓) Via the valuation area (Correct)**
+
+---
+
+**Question 33/80**
+On which levels can you define the technical clearing account for Integrated Asset Acquisition in Customizing? Note: There are 2 correct answers to this question.
+* **(✓) Chart of Accounts (Correct)**
+* (X) Asset Class (Incorrect)
+* **(✓) Account determination (Correct)**
+* (X) Depreciation area (Incorrect)
+
+---
+
+**Question 34/80**
+At which levels do you choose between direct and indirect quotation? Note: There are 2 correct answers to this question.
+* (X) Country (Incorrect)
+* (X) Company code (Incorrect)
+* **(✓) Exchange rate type (Correct)**
+* **(✓) Client (Correct)**
+
+---
+
+**Question 35/80**
+What are some SAP recommended guiding principles to achieve clean core operations? Note: There are 3 correct answers to this question.
+* **(✓) De ne roles and responsibilities as part of a process transformation o ce. (Correct)**
+* (X) Establish release management. (Incorrect)
+* **(✓) Integrate clean core practices in the end-to-end value process chain. (Correct)**
+* **(✓) Establish regular housekeeping tasks and procedures. (Correct)**
+* (X) Establish an organizational structure, technical foundation, and transformation methodology for clean core. (Incorrect)
+
+---
+
+**Question 36/80**
+At which levels can the print program and its variant be assigned to the correspondence type? Note: There are 2 correct answers to this question.
+* (X) System (Incorrect)
+* (X) Company (Incorrect)
+* **(✓) Client (Correct)**
+* **(✓) Company code (Correct)**
+
+---
+
+**Question 37/80**
+What can you control with the reason code in Accounts Receivable? Note: There are 3 correct answers to this question.
+* **(✓) The account where a residual item is posted (Correct)**
+* **(✓) The type of payment notice sent to a customer (Correct)**
+* (X) The special G/L indicator for the down payment (Incorrect)
+* (X) The document type of the payment (Incorrect)
+* **(✓) The exclusion of disputed residual items from credit limit checks (Correct)**
+
+---
+
+**Question 38/80**
+You have activated the WBS Element (not related to Investment Management) as an account assignment for asset accounting ?balance sheet" and "identical" active. What are the consequences ?Note: There are 2 correct answers to this question.
+* (X) The WBS Element cannot be used anymore for settlement. (Incorrect)
+* (X) The WBS Element from the asset master data can be changed during planned depreciation posting (Incorrect)
+* **(✓) The WBS Element is available for input in the asset master record. (Correct)**
+* (X) The WBS Element can no longer be changed in the asset master record once the asset is capitalized. (Incorrect)
+
+---
+
+**Question 39/80**
+Which physical inventory methods are available in SAP S/4HANA? Note: There are 3 correct answers to this question.
+* **(✓) Cycle counting method (Correct)**
+* **(✓) Continuous inventory method (Correct)**
+* (X) Actual inventory method (Incorrect)
+* (X) Standard inventory method (Incorrect)
+* **(✓) Periodic inventory method (Correct)**
+
+---
+
+**Question 40/80**
+Where can you see the matching results from the Intercompany Matching and Reconciliation tool?
+* (X) In the Consolidation Journal table (ACDOCU) (Incorrect)
+* **(✓) In the Universal Journal table (ACDOCA) (Correct)**
+* (X) In an application specific table (ICADOCM) (Incorrect)
+* (X) In the Accounting Document Segment table (BSEG) (Incorrect)
+
+---
+
+**Question 41/80**
+On what level can you restrict postings using the posting period variant? Note: There are 2 correc answers to this question.
+* (X) Customer reconciliation account (Incorrect)
+* **(✓) Supplier account (Correct)**
+* **(✓) G/L account (Correct)**
+* (X) Fixed asset number (Incorrect)
+
+---
+
+**Question 42/80**
+You try to assign an alternative account to a G/L account but receive an error message. What can be the reason?
+* (X) The alternative account has not been created for the company code. (Incorrect)
+* (X) You have not assigned the alternative chart of accounts to your operational chart of accounts (Incorrect)
+* (X) You have not assigned the alternative chart of accounts to your company. (Incorrect)
+* **(✓) The alternative account is already assigned to another G/L account for the company code. (Correct)**
+
+---
+
+**Question 43/80**
+You de ne the technical clearing account for Integrated Asset Acquisition in Customizing. Which prerequisites must be met? Note: There are 2 correct answers to this question.
+* **(✓) The account is de need as a reconciliation account for fixed assets. (Correct)**
+* (X) The account is de need in the account determination for each asset class. (Incorrect)
+* **(✓) The account is a balance sheet account. (Correct)**
+* (X) The account is de need as open item managed. (Incorrect)
+
+---
+
+**Question 44/80**
+You want to post depreciation costs of one asset to two cost centers. How do you do this?
+* (X) You assign a real cost center and a statistical cost center in the asset master data. (Incorrect)
+* (X) You assign a statistical order in the asset master data which you settle periodically to two cost centers. (Incorrect)
+* (X) You assign two real cost centers in the asset master data. (Incorrect)
+* **(✓) You assign a real internal order in the asset master data which you settle periodically to two cost centers. (Correct)**
+
+---
+
+**Question 45/80**
+You post an unplanned depreciation to an asset. What is the e effect on FI-AA and FI-GL?
+* (X) Posting is done in FI-AA and in FI-GL online and in real time. (Incorrect)
+* (X) Posting is not done in FI-AA and in FI-GL until the depreciation posting program has run (Incorrect)
+* (X) Posting is done in FI-AA in real time and in FI-GL once the periodic posting program has run. (Incorrect)
+* **(✓) Posting is done in FI-AA in real time and in FI-GL once the depreciation posting program has run. (Correct)**
+
+---
+
+**Question 46/80**
+Your company follows IFRS accounting principles and needs to issue a full nancial statement. What do you need to achieve segment reporting in this scenario? Note: There are 3 correct answers to this question.
+* **(✓) Segments (Correct)**
+* **(✓) Business areas (Correct)**
+* (X) Document splitting (Incorrect)
+* **(✓) Pro t centers (Correct)**
+* (X) Pro tability segments (Incorrect)
+
+---
+
+**Question 47/80**
+Which of the following objects is only a statistical account assignment for cost postings to an asset?
+* (X) Cost center (Incorrect)
+* **(✓) Profit center (Correct)**
+* (X) Internal order (Incorrect)
+* (X) WBS element (Incorrect)
+
+---
+
+**Question 48/80**
+Which of the following currency types can be de need for a specific ledger? Note: There are 3 correct answers to this question.
+* **(✓) 60 Global company currency (Correct)**
+* (X) 00 = Document currency (Incorrect)
+* (X) 40 Hard currency (Incorrect)
+* **(✓) 30 Group currency (Correct)**
+* **(✓) 10 Company code currency (Correct)**
+
+---
+
+**Question 49/80**
+For which purposes can ICMR (Intercompany Matching and Reconciliation) be useful? Note: There are 2 correct answers to this question.
+* (X) To trigger elimination of intercompany revenues & costs based on rules configured (Incorrect)
+* (X) To generate automatic elimination of intercompany AR/AP balances (Incorrect)
+* **(✓) To highlight and solve intercompany data discrepancy triggering a workflow (Correct)**
+* **(✓) To generate automatic posting to correct intercompany discrepancy (Correct)**
+
+---
+
+**Question 50/80**
+SAP S/4HANA has introduced the Universal Journal (table ACDOCA). Which line items are recorded in the table ACDOCA? Note: There are 3 correct answers to this question.
+* (X) Budgeted costs for a cost center (Incorrect)
+* **(✓) Plan depreciation amounts (Correct)**
+* (X) Secondary costs resulting from an assessment (Incorrect)
+* **(✓) Intercompany postings (Correct)**
+* **(✓) Primary costs resulting from a distribution (Correct)**
+
+---
+
+**Question 51/80**
+What can you achieve with the legacy data transfer in Asset Accounting via transaction AS91?
+* (X) Setting the company code status for legacy data transfer (Incorrect)
+* **(✓) Posting of take over values (Correct)**
+* (X) Posting the summary write o in G/L (Incorrect)
+* (X) Creation of master data (Incorrect)
+
+---
+
+**Question 52/80**
+You post a vendor invoice for asset acquisition without reference to a purchase order. Which accounting documents are generated?
+* **(✓) One document per accounting principle & one document for all accounting principles (Correct)**
+* (X) One document per accounting principle (Incorrect)
+* (X) One document for all accounting principles (Incorrect)
+* (X) Separate documents for each and every accounting principle (Incorrect)
+
+---
+
+**Question 53/80**
+How are pages assigned to users on the SAP Fiori Launchpad?
+* (X) Via sections assigned to business roles which are assigned to users (Incorrect)
+* (X) Via groups assigned to business roles which are assigned to users (Incorrect)
+* **(✓) Via spaces assigned to business roles which are assigned to users (Correct)**
+* (X) Directly to business roles which are assigned to users (Incorrect)
+
+---
+
+**Question 54/80**
+You perform foreign currency valuation for open items of your supplier accounts. What account does the system use to post the valuation differences?
+* **(✓) Individual supplier accounts with special G/L indicator (Correct)**
+* **(✓) Alternative reconciliation G/L account (Correct)**
+* (X) Adjustment G/L account for foreign currency (Incorrect)
+* (X) Supplier reconciliation G/L account (Incorrect)
+
+---
+
+**Question 55/80**
+You run a nancial statement report and notice the net pro t calculated is different than what you expect. What could cause the issue? Note: There are 2 correct answers to this question.
+* **(✓) You have added an account to the wrong node and it is included in the assets section. (Correct)**
+* **(✓) You have accounts that you have not assigned in the nancial statement version. (Correct)**
+* (X) You have added an account to the liabilities node that belongs to the financial statement notes. (Incorrect)
+* (X) You selected account group assignment by balance for an account and it is displayed as a liability. (Incorrect)
+
+---
+
+**Question 56/80**
+How would you de ne Intercompany Matching and Reconciliation (ICMR)? Note: There are 2 correct answers to this question.
+* (X) It is a solution that facilitates transaction matching between systems in Central Finance. (Incorrect)
+* (X) It is a solution embedded in the SAP S/4HANA core. (Incorrect)
+* **(✓) It is a solution that can be integrated with Group Reporting. (Correct)**
+* (X) It is a solution that requires the parallel implementation of SAP Group Reporting Data Collection. (Incorrect)
+
+---
+
+**Question 57/80**
+Which of the following can you use to explore released APIs?
+* (X) SAP Integration Suite (Incorrect)
+* (X) SAP Application Interface Framework (Incorrect)
+* **(✓) SAP Business Accelerator Hub (Correct)**
+
+---
+
+**Question 58/80**
+Which component of the Intelligent Enterprise allows customers to discover and deploy vertical solutions?
+* (X) Business Network (Incorrect)
+* (X) Intelligent Suite (Incorrect)
+* (X) Experience Management (Incorrect)
+* **(✓) Industry Cloud (Correct)**
+
+---
+
+**Question 59/80**
+You notice that in the entry view of a document you have fewer items than in the general ledger view. What is the reason for this?
+* (X) The sub-ledger accounts are shown in details in the general ledger view. (Incorrect)
+* **(✓) Document splitting has been activated. (Correct)**
+* (X) An extension ledger has been configured. (Incorrect)
+* (X) The sales tax is posted in details in the general ledger view. (Incorrect)
+
+---
+
+**Question 60/80**
+You de ne payment methods. Which parameters do you de ne on the level of the company code? Note: There are 2 correct answers to this question
+* (X) Payment Medium (Incorrect)
+* **(✓) Minimum and maximum payment amounts (Correct)**
+* (X) Permitted Currencies (Incorrect)
+* **(✓) Foreign currency allowed (Correct)**
+
+---
+
+**Question 61/80**
+Which date must the system determine when you enter an invoice that needs to be paid?
+* (X) Order date (Incorrect)
+* **(✓) Baseline date (Correct)**
+* (X) Reference date (Incorrect)
+* (X) Payment date (Incorrect)
+
+---
+
+**Question 62/80**
+You try to create a G/L account but you get an error because the account number is not in the accepted range. Which object do you need to customize to extend the number range?
+* (X) Tolerance group (Incorrect)
+* **(✓) Account group (Correct)**
+* (X) Chart of accounts (Incorrect)
+* (X) Account type (Incorrect)
+
+---
+
+**Question 63/80**
+On which level do you maintain the currency translation ratio between two currencies?
+* **(✓) Exchange rate type (Correct)**
+* (X) Currency type (Incorrect)
+* (X) Document type (Incorrect)
+* (X) Valuation type (Incorrect)
+
+---
+
+**Question 64/80**
+You want to post a reversal for a document posted in a closed posting period. Which object do you configure?
+* (X) Document type (Incorrect)
+* **(✓) Reversal reason (Correct)**
+* (X) Company code (Incorrect)
+* (X) Reversal method (Incorrect)
+
+---
+
+**Question 65/80**
+What is the role of the valuation method in the foreign currency valuation? Note: There are 3 correct answers to this question.
+* (X) De ne the posting and reversal date for the valuation posting (Incorrect)
+* **(✓) De ne the document type for the valuation posting (Correct)**
+* **(✓) Determine the exchange rate type (Correct)**
+* (X) Determine the G/L accounts for the valuation posting (Incorrect)
+* **(✓) De ne the valuation procedure (Correct)**
+
+---
+
+**Question 66/80**
+You post an incoming payment from a customer with a residual item. What are the consequences? Note: There are 2 correct answers to this question.
+* (X) Both the original open item and the residual item remain on the account as open items. (Incorrect)
+* **(✓) The residual item becomes a new receivable. (Correct)**
+* **(✓) The original document and the payment are cleared. (Correct)**
+* (X) The residual item is written o to a cost account. (Incorrect)
+
+---
+
+**Question 67/80**
+In which scenarios is the technical clearing account posted? Note: There are 2 correct answers to this question.
+* (X) Asset transfer posting between asset classes (Incorrect)
+* **(✓) Valuated goods receipt on a purchase order with an asset as account assignment (Correct)**
+* **(✓) Direct asset acquisition posting with a vendor invoice (not linked to a purchase order) (Correct)**
+* (X) Settlement of an investment order to an asset under construction (Incorrect)
+
+---
+
+**Question 68/80**
+Which currency types are defaulted in SAP S/4HANA? Note: There are 2 correct answers to this question.
+* (X) 30 = Group currency (Incorrect)
+* **(✓) 00 = Document currency (Correct)**
+* **(✓) 10 Company code currency (Correct)**
+* (X) 20 Controlling area currency (Incorrect)
+
+---
+
+**Question 69/80**
+What is the prerequisite for a G/L account to switch off open item management for it?
+* (X) It has no open items. (Incorrect)
+* **(✓) It has a zero balance. (Correct)**
+* (X) It has not been posted to. (Incorrect)
+* (X) It has been blocked against postings. (Incorrect)
+
+---
+
+**Question 70/80**
+Which object is used to directly support the preparation for consolidation?
+* (X) Segments/Pro t Centers (Incorrect)
+* **(✓) Company/Trading Partner (Correct)**
+* (X) Functional Areas (Incorrect)
+* (X) Ledgers/Ledger Groups (Incorrect)
+
+---
+
+**Question 71/80**
+Which of the following API types does SAP recommend to use to achieve clean core integrations? Note: There are 2 correct answers to this question
+* **(✓) OData (Correct)**
+* (X) RFC (Incorrect)
+* **(✓) SOAP (Correct)**
+* (X) IDoc (Incorrect)
+
+---
+
+**Question 72/80**
+You notice the document number is in the wrong number range. After reversing, what do you need to change when reposting?
+* (X) Document number (Incorrect)
+* (X) Posting key (Incorrect)
+* **(✓) Document type (Correct)**
+* (X) Assignment (Incorrect)
+
+---
+
+**Question 73/80**
+What are the consequences of the activation of segment reporting in Asset Accounting? Note: There are 2 correct answers to this question.
+* **(✓) The segment appears in the screen layout for asset master data. (Correct)**
+* (X) The segment is automatically updated in existing asset master data. (Incorrect)
+* (X) The segment activation can be reversed. (Incorrect)
+* **(✓) The segment appears in the additional account assignment configuration. (Correct)**
+
+---
+
+**Question 74/80**
+Where do you assign the group chart of accounts?
+* (X) General ledger account (Incorrect)
+* **(✓) Operating chart of accounts (Correct)**
+* (X) Company (Incorrect)
+* (X) Company code (Incorrect)
+
+---
+
+**Question 75/80**
+Which SAP Fiori apps can be run on any database? Note: There are 2 correct answers to this question.
+* (X) Accounts Payable Overview (Incorrect)
+* **(✓) Make Bank Transfers (Correct)**
+* **(✓) Manage Chart of Accounts (Correct)**
+* (X) Customer Accounting Document (Incorrect)
+
+---
+
+**Question 76/80**
+The 3-way match is the standard procedure used to post procurement transactions. How does it work?
+* (X) The invoice needs to be created in reference to the goods receipt (Incorrect)
+* **(✓) The purchase order needs to be created in reference to a purchase request. (Correct)**
+* (X) The 3 logistical steps each generate nancial documents. (Incorrect)
+* (X) The goods receipt needs to be created in reference to the purchase order. (Incorrect)
+
+---
+
+**Question 77/80**
+Your system uses parallel currencies. What is the posting indicator of the depreciation area for the parallel currency?
+* (X) Posts APC real time and depreciation periodically (Incorrect)
+* (X) Does not post to G/L (Incorrect)
+* **(✓) Posts to G/L in real time (Correct)**
+* (X) Posts to G/L periodically (Incorrect)
+
+---
+
+**Question 78/80**
+In the standard sales process, when is the COGS posting generated in Financial Accounting?
+* **(✓) Do PGI (Post Goods Issue) (Correct)**
+* (X) Create delivery document (Incorrect)
+* (X) Create billing document (Incorrect)
+* (X) Issue customer invoice (Incorrect)
+
+---
+
+**Question 79/80**
+Corporate group with 15 legal entities (10 codes in S/4HANA, 5 legacy). How many companies should you define?
+* (X) 10 (Incorrect)
+* **(✓) 5 (Correct)**
+* (X) 1 (Incorrect)
+* (X) 15 (Incorrect)
+
+---
+
+**Question 80/80**
+Your company structures its P&L statement according to cost-of-sales accounting. Which Organizational unit do you need to define?
+* **(✓) Functional area (Correct)**
+* (X) Profit center (Incorrect)
+* (X) Segment (Incorrect)
+* (X) Business area (Incorrect)`;
+
+function parseCO(txt) {
+  return txt.trim().split(/\n\n(?=Q\d+\.)/).map(block => {
+    const lines = block.trim().split(/\n/).map(x => x.trim()).filter(Boolean);
+    const first = lines[0];
+    const qm = first.match(/^Q(\d+)\.\s*(.*)$/);
+    const qnum = Number(qm[1]);
+    const stemParts = [qm[2]];
+    let i = 1;
+    while (i < lines.length && !/^[A-E]\./.test(lines[i])) {
+      stemParts.push(lines[i]);
+      i++;
+    }
+    const options = [];
+    const correct = [];
+    for (; i < lines.length; i++) {
+      const m = lines[i].match(/^([A-E])\.\s*(.*)$/);
+      if (!m) continue;
+      let text = m[2];
+      const isCorrect = /\(correct\)$/i.test(text);
+      text = text.replace(/\s*\(correct\)$/i, "");
+      if (isCorrect) correct.push(options.length);
+      options.push({ id: m[1], text });
+    }
+    return { id: `CO:${qnum}`, module: "CO", qnum, set: Math.ceil(qnum / 10), stem: stemParts.join(" "), options, correct };
+  });
+}
+
+function parseFI(txt) {
+  return txt.split(/\n---\n/g).map(block => block.trim()).filter(block => /\*\*Question \d+\/80\*\*/.test(block)).map(block => {
+    const lines = block.split(/\n/).map(x => x.trim()).filter(Boolean);
+    const header = lines.shift();
+    const hm = header.match(/\*\*Question (\d+)\/80\*\*/);
+    const qnum = Number(hm[1]);
+    const stemParts = [];
+    while (lines.length && !/^\*/.test(lines[0])) stemParts.push(lines.shift());
+    const options = [];
+    const correct = [];
+    lines.forEach(line => {
+      if (!/^\*/.test(line)) return;
+      const isCorrect = /\(✓\)/.test(line);
+      let text = line.replace(/^\*+\s*/, "");
+      text = text.replace(/^\*\*/, "").replace(/\*\*$/, "");
+      text = text.replace(/\*\*/g, "");
+      text = text.replace(/^\(✓\)\s*/, "").replace(/^\(X\)\s*/, "");
+      text = text.replace(/\s*\(Correct\)$/i, "").replace(/\s*\(Incorrect\)$/i, "");
+      if (isCorrect) correct.push(options.length);
+      options.push({ id: String.fromCharCode(65 + options.length), text });
+    });
+    return { id: `FI:${qnum}`, module: "FI", qnum, set: Math.ceil(qnum / 10), stem: stemParts.join(" "), options, correct };
+  });
+}
+
+const CO_BANK = parseCO(CO_SOURCE);
+const FI_BANK = parseFI(FI_SOURCE);
+const COMBINED_BANK = [...CO_BANK, ...FI_BANK].sort((a, b) => a.set - b.set || a.module.localeCompare(b.module) || a.qnum - b.qnum);
+
+const STORAGE_KEY = "sap_fi_co_embedded_single_file_v1";
+const state = { session: null, results: null, timerRef: null };
+
+function loadStore() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    if (!parsed.weak) parsed.weak = { CO: [], FI: [] };
+    if (!parsed.history) parsed.history = [];
+    return parsed;
+  } catch {
+    return { weak: { CO: [], FI: [] }, history: [] };
+  }
+}
+function saveStore(store) { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+function escapeHtml(str) { return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"); }
+function shuffle(arr) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+function arraysEqual(a, b) { return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort()); }
+function formatDuration(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return [h, m, s].map((n, idx) => idx === 0 ? String(n) : String(n).padStart(2, "0")).join(":");
+}
+
+function getScopeOptions(module) {
+  const labels = [];
+  for (let i = 1; i <= 8; i++) {
+    labels.push({ value: `set${i}`, label: module === "COMBINED" ? `Combined Set ${i} (${(i-1)*10+1}-${i*10} in CO + FI)` : `Set ${i} (Q${(i-1)*10+1}–Q${i*10})` });
+  }
+  labels.push({ value: "semi1", label: module === "COMBINED" ? "Semi-Final A (Sets 1–4 · 80 questions)" : "Semi-Final A (Q1–Q40)" });
+  labels.push({ value: "semi2", label: module === "COMBINED" ? "Semi-Final B (Sets 5–8 · 80 questions)" : "Semi-Final B (Q41–Q80)" });
+  labels.push({ value: "all", label: module === "COMBINED" ? "All 160 Questions" : "All 80 Questions" });
+  labels.push({ value: "weak", label: "Weak Questions Only" });
+  return labels;
+}
+function renderScopeOptions() {
+  const module = document.getElementById("moduleSelect").value;
+  const scope = document.getElementById("scope");
+  const current = scope.value || "set1";
+  scope.innerHTML = getScopeOptions(module).map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`).join("");
+  scope.value = getScopeOptions(module).some(x => x.value === current) ? current : "set1";
+}
+function getActiveBank(module) {
+  if (module === "CO") return CO_BANK;
+  if (module === "FI") return FI_BANK;
+  return COMBINED_BANK;
+}
+function getScopeLabel(scope, module) {
+  if (scope === "weak") return "Weak Questions";
+  if (scope === "all") return module === "COMBINED" ? "All 160" : "All 80";
+  if (scope === "semi1") return module === "COMBINED" ? "Semi-Final A (Sets 1–4)" : "Semi-Final A (Q1–Q40)";
+  if (scope === "semi2") return module === "COMBINED" ? "Semi-Final B (Sets 5–8)" : "Semi-Final B (Q41–Q80)";
+  const s = Number(scope.replace("set", ""));
+  return module === "COMBINED" ? `Combined Set ${s}` : `Set ${s} (Q${(s-1)*10+1}–Q${s*10})`;
+}
+function filterByScope(bank, module, scope) {
+  const store = loadStore();
+  if (scope === "weak") {
+    const weakSet = new Set();
+    if (module === "COMBINED") {
+      (store.weak.CO || []).forEach(x => weakSet.add(`CO:${x}`));
+      (store.weak.FI || []).forEach(x => weakSet.add(`FI:${x}`));
+    } else {
+      (store.weak[module] || []).forEach(x => weakSet.add(`${module}:${x}`));
+    }
+    return bank.filter(q => weakSet.has(q.id));
+  }
+  if (scope === "all") return bank.slice();
+  if (scope === "semi1") return bank.filter(q => q.set >= 1 && q.set <= 4);
+  if (scope === "semi2") return bank.filter(q => q.set >= 5 && q.set <= 8);
+  const setNum = Number(scope.replace("set", ""));
+  return bank.filter(q => q.set === setNum);
+}
+function prepareSession() {
+  const module = document.getElementById("moduleSelect").value;
+  const scope = document.getElementById("scope").value;
+  const mode = document.getElementById("mode").value;
+  const shuffleQuestions = document.getElementById("shuffleQuestions").checked;
+  const shuffleOptions = document.getElementById("shuffleOptions").checked;
+  const timerEnabled = document.getElementById("enableTimer").checked;
+  const timerMinutes = Number(document.getElementById("timerMinutes").value || 60);
+  let questions = filterByScope(getActiveBank(module), module, scope).map(q => JSON.parse(JSON.stringify(q)));
+  if (!questions.length) {
+    alert("No questions available in the selected scope.");
+    return null;
+  }
+  if (shuffleOptions) {
+    questions = questions.map(q => {
+      const renderedOptions = shuffle(q.options.map((o, idx) => ({ originalIndex: idx, text: o.text })));
+      q.renderedOptions = renderedOptions.map((o, idx) => ({ label: String.fromCharCode(65 + idx), text: o.text, isCorrect: q.correct.includes(o.originalIndex) }));
+      q.correctRendered = q.renderedOptions.filter(o => o.isCorrect).map(o => o.label);
+      return q;
+    });
+  } else {
+    questions = questions.map(q => {
+      q.renderedOptions = q.options.map((o, idx) => ({ label: o.id || String.fromCharCode(65 + idx), text: o.text, isCorrect: q.correct.includes(idx) }));
+      q.correctRendered = q.renderedOptions.filter(o => o.isCorrect).map(o => o.label);
+      return q;
+    });
+  }
+  if (shuffleQuestions) questions = shuffle(questions);
+  const now = Date.now();
+  return {
+    id: now,
+    createdAt: new Date(now).toISOString(),
+    module,
+    scope,
+    mode,
+    shuffleQuestions,
+    shuffleOptions,
+    timerEnabled,
+    timerMinutes,
+    timerStartedAt: now,
+    timerEndAt: timerEnabled ? now + (timerMinutes * 60 * 1000) : null,
+    questions,
+    index: 0,
+    answers: {},
+    checked: {},
+    submitted: false
+  };
+}
+
+function persistDraft() {
+  const store = loadStore();
+  store.draft = state.session;
+  saveStore(store);
+}
+function renderSavedStats() {
+  const module = document.getElementById("moduleSelect").value;
+  const box = document.getElementById("savedStats");
+  const store = loadStore();
+  const history = [...(store.history || [])];
+  const weakCO = (store.weak.CO || []).length;
+  const weakFI = (store.weak.FI || []).length;
+  const weakTotal = weakCO + weakFI;
+  const relevant = history.filter(h => h.module === module || module === "COMBINED");
+  const recent = relevant.slice(-6).reverse().map(h => `
+    <div class="history-item">
+      <div><strong>${escapeHtml(h.module)} · ${escapeHtml(h.scopeLabel)}</strong> · ${escapeHtml(h.mode)}</div>
+      <div class="mini">${new Date(h.createdAt).toLocaleString()}</div>
+      <div class="mini">Score: ${h.correct}/${h.total} (${h.accuracy}%)${h.timerEnabled ? ` · Timer ${h.timerMinutes} min · Used ${formatDuration(h.timeUsedMs || 0)}` : ""}</div>
+    </div>
+  `).join("");
+  box.innerHTML = `
+    <div class="history-item"><strong>Weak questions tracked:</strong> CO ${weakCO} · FI ${weakFI} · Total ${weakTotal}<div class="mini" style="margin-top:4px;">Incorrect questions are tracked separately by module and kept for combined review.</div></div>
+    ${recent || '<div class="history-item">No saved sessions yet.</div>'}
+  `;
+}
+function updateTimerBadge() {
+  const badge = document.getElementById("timerBadge");
+  const s = state.session;
+  if (!s || !s.timerEnabled) { badge.classList.add("hidden"); return; }
+  badge.classList.remove("hidden");
+  badge.textContent = `Time left ${formatDuration(Math.max(0, s.timerEndAt - Date.now()))}`;
+}
+function stopTimer() { if (state.timerRef) clearInterval(state.timerRef); state.timerRef = null; }
+function startTimerLoop() {
+  stopTimer();
+  updateTimerBadge();
+  if (!state.session || !state.session.timerEnabled) return;
+  state.timerRef = setInterval(() => {
+    updateTimerBadge();
+    if (Date.now() >= state.session.timerEndAt) submitSession(true);
+  }, 1000);
+}
+function fitQuestionToViewport() {
+  const outer = document.getElementById("questionWrap");
+  const inner = document.getElementById("questionFit");
+  if (!outer || !inner) return;
+  inner.style.transform = "scale(1)";
+  inner.style.marginTop = "-6px";
+  inner.style.width = "100%";
+  const availableW = outer.clientWidth;
+  const availableH = outer.clientHeight;
+  if (!availableW || !availableH) return;
+  const fullW = inner.scrollWidth;
+  const fullH = inner.scrollHeight;
+  const scaleW = availableW / Math.max(fullW, 1);
+  const scaleH = availableH / Math.max(fullH, 1);
+  const scale = Math.max(0.68, Math.min(1.03, scaleW, scaleH));
+  inner.style.transform = `scale(${scale})`;
+  inner.style.width = `${100 / scale}%`;
+  if (scale === 1) inner.style.width = "100%";
+}
+function renderQuestion() {
+  const s = state.session;
+  if (!s) {
+    document.getElementById("scopeBadge").textContent = "";
+    document.getElementById("modeBadge").textContent = "";
+    document.getElementById("progressBadge").textContent = "No active session";
+    document.getElementById("timerBadge").classList.add("hidden");
+    document.getElementById("questionWrap").innerHTML = `<div class="placeholder"><h3>Ready to begin</h3><p>Select your module, scope, and mode above, then click <strong>Start session</strong>.</p><p>The question area will appear here and use most of the lower screen space.</p></div>`;
+    ["addWeakBtn","checkBtn","submitBtn","prevBtn","nextBtn","jumpFirstBtn","jumpLastBtn"].forEach(id => document.getElementById(id).disabled = true);
+    return;
+  }
+  ["addWeakBtn","checkBtn","submitBtn","prevBtn","nextBtn","jumpFirstBtn","jumpLastBtn"].forEach(id => document.getElementById(id).disabled = false);
+  const q = s.questions[s.index];
+  const store = loadStore();
+  const weakSet = new Set((store.weak[q.module] || []).map(x => Number(x)));
+  document.getElementById("addWeakBtn").textContent = weakSet.has(q.qnum) ? "In weak pool ✓" : "Add current to weak pool";
+  const answer = s.answers[q.id] || [];
+  const checked = !!s.checked[q.id];
+  document.getElementById("scopeBadge").textContent = getScopeLabel(s.scope, s.module);
+  document.getElementById("modeBadge").textContent = `${s.module} · ${s.mode.toUpperCase()}`;
+  document.getElementById("progressBadge").textContent = `Question ${s.index + 1}/${s.questions.length} (${q.module} Original Q${q.qnum})`;
+  updateTimerBadge();
+  const multi = q.correctRendered.length > 1;
+  const inputType = multi ? "checkbox" : "radio";
+  const disabled = s.submitted ? "disabled" : "";
+  const reviewMode = s.submitted || checked;
+  const optionsHtml = q.renderedOptions.map(opt => {
+    const selected = answer.includes(opt.label);
+    const isCorrect = q.correctRendered.includes(opt.label);
+    let extraClass = "";
+    let mark = "";
+    if (reviewMode) {
+      if (isCorrect) { extraClass = "correct"; mark = "✅"; }
+      if (selected && !isCorrect) { extraClass = "wrong"; mark = "❌"; }
+    }
+    return `
+      <label class="opt ${extraClass}">
+        <input type="${inputType}" name="q_${q.id}" value="${opt.label}" ${selected ? "checked" : ""} ${disabled}>
+        <div class="optlabel"><strong>${opt.label}.</strong> ${escapeHtml(opt.text)}</div>
+        <div class="mark">${mark}</div>
+      </label>`;
+  }).join("");
+  document.getElementById("questionWrap").innerHTML = `
+    <div id="questionFit" class="question-fit">
+      <div class="meta">Question ${s.index + 1}/${s.questions.length} (${q.module} Original Q${q.qnum})</div>
+      <h3>${escapeHtml(q.stem)}</h3>
+      <div class="options">${optionsHtml}</div>
+    </div>`;
+  document.querySelectorAll(`[name="q_${CSS.escape(q.id)}"]`).forEach(el => {
+    el.addEventListener("change", () => {
+      const picked = [...document.querySelectorAll(`[name="q_${CSS.escape(q.id)}"]:checked`)].map(x => x.value).sort();
+      s.answers[q.id] = picked;
+      persistDraft();
+    });
+  });
+  document.getElementById("checkBtn").classList.toggle("hidden", s.mode === "exam");
+  requestAnimationFrame(() => fitQuestionToViewport());
+}
+function addCurrentQuestionToWeakPool() {
+  const s = state.session; if (!s) return;
+  const q = s.questions[s.index];
+  const store = loadStore();
+  const weakSet = new Set(store.weak[q.module] || []);
+  const already = weakSet.has(q.qnum);
+  weakSet.add(q.qnum);
+  store.weak[q.module] = [...weakSet].sort((a,b)=>a-b);
+  saveStore(store);
+  renderSavedStats();
+  renderQuestion();
+  alert(already ? `${q.module} Original Q${q.qnum} is already in the weak pool.` : `${q.module} Original Q${q.qnum} added to the weak pool.`);
+}
+function checkCurrent() {
+  const s = state.session; if (!s) return;
+  s.checked[s.questions[s.index].id] = true;
+  persistDraft();
+  renderQuestion();
+}
+function scoreSession() {
+  const s = state.session;
+  const incorrect = [];
+  const reviewed = [];
+  let correctCount = 0;
+  s.questions.forEach((q, idx) => {
+    const picked = (s.answers[q.id] || []).slice().sort();
+    const correct = q.correctRendered.slice().sort();
+    const ok = arraysEqual(picked, correct);
+    const row = { screenNumber: idx + 1, id: q.id, qnum: q.qnum, module: q.module, stem: q.stem, options: q.renderedOptions, picked, correct, ok };
+    reviewed.push(row);
+    if (ok) correctCount++; else incorrect.push(row);
+  });
+  const total = s.questions.length;
+  const accuracy = total ? Math.round((correctCount / total) * 100) : 0;
+  const finishedAt = Date.now();
+  const timeUsedMs = s.timerEnabled ? Math.max(0, Math.min(finishedAt, s.timerEndAt) - s.timerStartedAt) : Math.max(0, finishedAt - s.timerStartedAt);
+  state.results = { total, correctCount, incorrect, reviewed, accuracy, timeUsedMs };
+  s.submitted = true;
+  stopTimer();
+  const store = loadStore();
+  incorrect.forEach(item => {
+    const ws = new Set(store.weak[item.module] || []);
+    ws.add(item.qnum);
+    store.weak[item.module] = [...ws].sort((a,b)=>a-b);
+  });
+  store.history = [...(store.history || []), { createdAt: s.createdAt, module: s.module, scope: s.scope, scopeLabel: getScopeLabel(s.scope, s.module), mode: s.mode, total, correct: correctCount, accuracy, timerEnabled: !!s.timerEnabled, timerMinutes: s.timerMinutes || 0, timeUsedMs }].slice(-200);
+  store.draft = null;
+  saveStore(store);
+  renderSavedStats();
+}
+function renderResults() {
+  const r = state.results;
+  document.getElementById("resultsCard").classList.remove("hidden");
+  document.getElementById("scoreText").textContent = `${r.correctCount}/${r.total}`;
+  document.getElementById("correctText").textContent = r.correctCount;
+  document.getElementById("incorrectText").textContent = r.total - r.correctCount;
+  document.getElementById("accuracyText").textContent = `${r.accuracy}%`;
+  document.getElementById("timeUsedText").textContent = formatDuration(r.timeUsedMs || 0);
+  document.getElementById("resultNote").textContent = r.incorrect.length ? `Incorrect questions tracked as weak questions: ${r.incorrect.map(x => `${x.module} Q${x.qnum}`).join(", ")}. You can review the full set in the same chronology as the test.` : "Perfect score. No weak questions added. You can still review the full set in test order.";
+}
+function renderReview(mode = "all") {
+  const r = state.results;
+  const box = document.getElementById("reviewList");
+  const source = mode === "wrong" ? r.incorrect : r.reviewed;
+  if (!source.length) {
+    box.innerHTML = `<div class="review-item"><strong>${mode === "wrong" ? "No incorrect answers." : "No questions available for review."}</strong></div>`;
+    return;
+  }
+  box.innerHTML = source.map(item => {
+    const optionsHtml = item.options.map(opt => {
+      const picked = item.picked.includes(opt.label);
+      const correct = item.correct.includes(opt.label);
+      const cls = correct ? "correct" : (picked && !correct ? "wrong" : "");
+      const mark = correct ? "✅" : (picked && !correct ? "❌" : "");
+      return `<div class="opt ${cls}"><div class="optlabel"><strong>${opt.label}.</strong> ${escapeHtml(opt.text)}</div><div class="mark">${mark}</div></div>`;
+    }).join("");
+    return `<div class="review-item"><div class="mini">Q${item.screenNumber} · ${item.module} Original Q${item.qnum} · ${item.ok ? "Correct" : "Incorrect"}</div><h3 style="font-size:20px; margin:8px 0 10px;">${escapeHtml(item.stem)}</h3><div class="options">${optionsHtml}</div><div class="mini" style="margin-top:10px;">Your answer: ${item.picked.join(", ") || "No selection"} · Correct answer: ${item.correct.join(", ")}</div></div>`;
+  }).join("");
+}
+function submitSession() { if (!state.session) return; scoreSession(); renderQuestion(); renderResults(); closeReview(); }
+function openReview(mode = "all") { const card = document.getElementById("reviewCard"); card.classList.remove("hidden"); card.classList.add("expanded"); document.body.classList.add("review-open"); renderReview(mode); }
+function closeReview() { const card = document.getElementById("reviewCard"); card.classList.remove("expanded"); card.classList.add("hidden"); document.body.classList.remove("review-open"); }
+function startFresh() {
+  const session = prepareSession();
+  if (!session) return;
+  state.session = session;
+  state.results = null;
+  document.getElementById("resultsCard").classList.add("hidden");
+  closeReview();
+  persistDraft();
+  startTimerLoop();
+  renderQuestion();
+}
+function resumeDraft() {
+  const store = loadStore();
+  if (!store.draft) return alert("No saved draft session found.");
+  state.session = store.draft;
+  state.results = null;
+  document.getElementById("resultsCard").classList.add("hidden");
+  closeReview();
+  startTimerLoop();
+  renderQuestion();
+}
+
+document.getElementById("moduleSelect").addEventListener("change", () => { renderScopeOptions(); renderSavedStats(); });
+document.getElementById("enableTimer").addEventListener("change", e => document.getElementById("timerDurationWrap").classList.toggle("hidden", !e.target.checked));
+document.getElementById("startBtn").addEventListener("click", startFresh);
+document.getElementById("resumeBtn").addEventListener("click", resumeDraft);
+document.getElementById("resetWeakBtn").addEventListener("click", () => {
+  const store = loadStore();
+  if (!(store.weak.CO || []).length && !(store.weak.FI || []).length) return alert("Weak question pools are already empty.");
+  if (!confirm("Reset both CO and FI weak pools? This will keep your saved history and draft session.")) return;
+  store.weak = { CO: [], FI: [] };
+  saveStore(store);
+  renderSavedStats();
+  renderQuestion();
+  alert("Weak pools reset.");
+});
+document.getElementById("resetProgressBtn").addEventListener("click", () => {
+  if (!confirm("Reset saved progress, weak questions, and draft session?")) return;
+  stopTimer();
+  localStorage.removeItem(STORAGE_KEY);
+  state.session = null;
+  state.results = null;
+  document.getElementById("resultsCard").classList.add("hidden");
+  closeReview();
+  renderSavedStats();
+  renderQuestion();
+  alert("Local progress reset.");
+});
+document.getElementById("addWeakBtn").addEventListener("click", addCurrentQuestionToWeakPool);
+document.getElementById("checkBtn").addEventListener("click", checkCurrent);
+document.getElementById("submitBtn").addEventListener("click", submitSession);
+document.getElementById("prevBtn").addEventListener("click", () => { if (!state.session) return; state.session.index = Math.max(0, state.session.index - 1); persistDraft(); renderQuestion(); });
+document.getElementById("nextBtn").addEventListener("click", () => { if (!state.session) return; state.session.index = Math.min(state.session.questions.length - 1, state.session.index + 1); persistDraft(); renderQuestion(); });
+document.getElementById("jumpFirstBtn").addEventListener("click", () => { if (!state.session) return; state.session.index = 0; persistDraft(); renderQuestion(); });
+document.getElementById("jumpLastBtn").addEventListener("click", () => { if (!state.session) return; state.session.index = state.session.questions.length - 1; persistDraft(); renderQuestion(); });
+document.getElementById("reviewBtn").addEventListener("click", () => openReview("all"));
+document.getElementById("reviewWrongBtn").addEventListener("click", () => openReview("wrong"));
+document.getElementById("reviewAllModeBtn").addEventListener("click", () => renderReview("all"));
+document.getElementById("reviewWrongModeBtn").addEventListener("click", () => renderReview("wrong"));
+document.getElementById("closeReviewBtn").addEventListener("click", closeReview);
+document.getElementById("restartBtn").addEventListener("click", () => { stopTimer(); state.session = null; state.results = null; document.getElementById("resultsCard").classList.add("hidden"); closeReview(); renderQuestion(); });
+
+document.getElementById("timerDurationWrap").classList.add("hidden");
+document.getElementById("bankCounts").textContent = `CO ${CO_BANK.length} · FI ${FI_BANK.length} · Combined ${CO_BANK.length + FI_BANK.length}`;
+renderScopeOptions();
+renderSavedStats();
+renderQuestion();
+</script>
+</body>
+</html>
